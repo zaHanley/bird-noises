@@ -8,6 +8,8 @@ import { RouterOutputs, api } from "~/utils/api";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
+import { LoadingPage } from "~/components/Loading";
+import { TRPCError } from "@trpc/server";
 
 dayjs.extend(relativeTime);
 
@@ -18,7 +20,7 @@ const CreatePostWizard = () => {
   if (!user) return null;
 
   return (
-    <div className="flex w-full gap-3">
+    <div className="flex w-full gap-3 text-amber-100">
       <Image
         src={user.profileImageUrl}
         alt={`${user.username}'s profile image`}
@@ -38,7 +40,7 @@ type PostWithUser = RouterOutputs["posts"]["getAll"][number];
 const PostView = (props: PostWithUser) => {
   const { post, author } = props;
   return (
-    <div key={post.id} className="flex gap-3 border-b border-slate-400 p-4">
+    <div key={post.id} className="flex gap-3 border-b border-rose-300 p-4">
       <Image
         src={author.profilePicture}
         height={56}
@@ -47,7 +49,7 @@ const PostView = (props: PostWithUser) => {
         className="h-16 w-16 rounded-full"
       />
       <div className="flex flex-col">
-        <div className="flex text-slate-300">
+        <div className="flex text-amber-100">
           <span>
             {`@${author.username}`}{" "}
             <span className="font-thin">{`· ${dayjs(
@@ -60,14 +62,34 @@ const PostView = (props: PostWithUser) => {
     </div>
   );
 };
+const Feed = () => {
+  const { data, isLoading: postsLoading } = api.posts.getAll.useQuery();
+
+  if (postsLoading) return <LoadingPage />;
+
+  if (!data)
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Something went wrong...",
+    });
+  return (
+    <div className="flex flex-col">
+      {[...data, ...data].map((fullPost) => (
+        <PostView {...fullPost} key={fullPost.post.id} />
+      ))}
+    </div>
+  );
+};
 
 const Home: NextPage = () => {
-  const user = useUser();
-  const { data, isLoading } = api.posts.getAll.useQuery();
+  const { isLoaded: userLoaded, isSignedIn } = useUser();
+  useUser();
 
-  if (isLoading) return <div>Loading...</div>;
+  // Fetch data ASAP (with React Query, you only have to fetch data once, and as long as the thing you're fetching with is the same, it will use the cached data.
+  api.posts.getAll.useQuery();
 
-  if (!data) return <div>Something went wrong</div>;
+  // Return empty div if BOTH aren't loaded in case user loads faster
+  if (!userLoaded) return <div />;
 
   return (
     <>
@@ -77,24 +99,20 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="flex h-screen justify-center">
-        <div className="h-full w-full border-x border-slate-400 md:max-w-2xl">
-          <div className="flex border-b border-slate-400 p-4">
-            {!user.isSignedIn && (
+        <div className="h-full w-full border-x border-rose-300 md:max-w-2xl">
+          <div className="flex border-b border-rose-300 p-4">
+            {!isSignedIn && (
               <div className="flex justify-center">
                 <SignInButton />
               </div>
             )}
-            {user.isSignedIn && (
+            {isSignedIn && (
               <div className="flex grow justify-center">
                 <CreatePostWizard />
               </div>
             )}
           </div>
-          <div className="flex flex-col">
-            {[...data, ...data].map((fullPost) => (
-              <PostView {...fullPost} key={fullPost.post.id} />
-            ))}
-          </div>
+          <Feed />
         </div>
       </main>
     </>
