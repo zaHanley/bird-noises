@@ -8,8 +8,8 @@ import { RouterOutputs, api } from "~/utils/api";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
-import { LoadingPage } from "~/components/Loading";
 import { TRPCError } from "@trpc/server";
+import { LoadingPage } from "~/components/Loading";
 
 dayjs.extend(relativeTime);
 
@@ -23,7 +23,7 @@ const CreatePostWizard = () => {
     <div className="flex w-full gap-3 text-amber-100">
       <Image
         src={user.profileImageUrl}
-        alt={`${user.username}'s profile image`}
+        alt={`${user.username!}'s profile image`}
         height={56}
         width={56}
         className="h-16 w-16 rounded-full"
